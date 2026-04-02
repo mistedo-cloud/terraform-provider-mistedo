@@ -1,5 +1,5 @@
 ---
-page_title: "mistedo_dns_record Resource - terraform-provider-mistedo"
+page_title: "mistedo_dns_record Resource - Mistedo Terraform Provider"
 subcategory: "DNS"
 description: |-
   Creates and updates a DNS record (A, CNAME, MX, etc.) inside a hosted zone.
@@ -7,15 +7,13 @@ description: |-
 
 # mistedo_dns_record (Resource)
 
-A **DNS record** is one row in DNS: a **name** (like `www`), a **type** (`A`, `CNAME`, …), and **content** (IP, hostname, text for TXT, etc.).
+A **DNS record** is one row in DNS: **name** (e.g. `www`), **type** (`A`, `CNAME`, …), and **content** (IP, hostname, TXT payload, etc.).
 
-The record belongs to a **zone** you already have — either created with [`mistedo_dns_zone`](dns_zone.md) or an existing zone in your account. Pass the zone’s **FQDN** in the `zone` argument.
+The record belongs to an existing zone — from [`mistedo_dns_zone`](dns_zone.md) or already present in your account. Pass the zone **FQDN** in `zone`.
 
----
+## Example
 
-## Examples
-
-### A record for a web server
+### A record
 
 ```hcl
 resource "mistedo_dns_zone" "main" {
@@ -31,7 +29,7 @@ resource "mistedo_dns_record" "www" {
 }
 ```
 
-### MX record (mail)
+### MX record
 
 ```hcl
 resource "mistedo_dns_record" "mx" {
@@ -44,39 +42,32 @@ resource "mistedo_dns_record" "mx" {
 }
 ```
 
-`@` is a common convention for the **zone apex** (the bare domain); the provider sends what the API accepts for your zone.
-
----
+`@` is a common convention for the **zone apex**; the provider sends what the API accepts for your zone.
 
 ## Arguments
 
-* `zone` — (Required) Hosted zone **FQDN** (usually `mistedo_dns_zone.<n>.name`). Changing **zone** replaces the record.
-* `name` — (Required) **Relative** owner name (`www`, `api`, …). Changing **name** replaces the record.
-* `type` — (Required) One of: **`A`**, **`AAAA`**, **`CNAME`**, **`TXT`**, **`SRV`**, **`MX`**, **`NS`**. Case in config is normalized. Changing **type** replaces the record.
-* `content` — (Required) **RDATA**: IP, hostname, TXT string, etc., as required by the type.
-* `ttl` — (Optional) Seconds. Default **300** if omitted.
-* `priority` — (Optional) For **MX** and **SRV** (0–65535).
-* `weight` / `port` — (Optional) For **SRV** when needed.
-
----
+| Name | Required | Description |
+|------|----------|-------------|
+| `zone` | Yes | Hosted zone **FQDN** (usually `mistedo_dns_zone.<n>.name`). Changing **zone** replaces the record. |
+| `name` | Yes | **Relative** owner name (`www`, `api`, …). Changing **name** replaces the record. |
+| `type` | Yes | One of **`A`**, **`AAAA`**, **`CNAME`**, **`TXT`**, **`SRV`**, **`MX`**, **`NS`**. Case is normalized. Changing **type** replaces the record. |
+| `content` | Yes | **RDATA** (IP, hostname, TXT string, …) depending on type. |
+| `ttl` | No | Seconds. Default **300** if omitted. |
+| `priority` | No | For **MX** and **SRV** (0–65535). |
+| `weight` | No | For **SRV** when needed. |
+| `port` | No | For **SRV** when needed. |
 
 ## Attributes
 
-* `id` — Composite: `<zone>/<record_path>` (opaque path segment from the API).
-* `record_path` — API identifier for updates/deletes (read-only).
-* `group` — Optional API grouping (read-only).
-
----
-
-## How updates work
-
-The HTTP API does not offer a small **PATCH** for records. The provider **updates** by **delete + create**. If delete succeeds but create fails, fix the config and run **apply** again.
-
-Changing **`zone`**, **`name`**, or **`type`** forces **destroy + create** instead of that path.
-
----
+| Name | Description |
+|------|-------------|
+| `id` | Composite: `<zone>/<record_path>` (opaque path from the API). |
+| `record_path` | API identifier for updates and deletes (read-only). |
+| `group` | Optional API grouping (read-only). |
 
 ## Import
+
+Import id format:
 
 ```text
 <zone_fqdn>/<record_path>
@@ -88,8 +79,14 @@ Changing **`zone`**, **`name`**, or **`type`** forces **destroy + create** inste
 terraform import 'mistedo_dns_record.www' 'example.com/x1.www'
 ```
 
----
+## Notes
 
-## Errors
+### Update behavior
 
-Auth or permission problems usually show as **401** or **403**. Invalid data often returns **4xx** with a short message from the API body.
+The HTTP API does not expose a small **PATCH** for records. The provider **updates** by **delete + create**. If delete succeeds but create fails, fix the config and run **apply** again.
+
+Changing **`zone`**, **`name`**, or **`type`** forces **destroy + create** instead of that path.
+
+### Errors
+
+Auth or permission issues usually surface as **401** or **403**. Invalid data often returns **4xx** with a message from the API body.

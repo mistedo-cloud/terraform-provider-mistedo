@@ -1,5 +1,5 @@
 ---
-page_title: "mistedo_lb_backend_services Data Source - terraform-provider-mistedo"
+page_title: "mistedo_lb_backend_services Data Source - Mistedo Terraform Provider"
 subcategory: "ALB"
 description: |-
   Lists backend services (instance groups) that can be attached to mistedo_lb_route.
@@ -7,11 +7,9 @@ description: |-
 
 # mistedo_lb_backend_services (Data Source)
 
-**Read-only.** Lists **backend services** — the compute/instance targets that actually serve HTTP behind the load balancer.
+Lists **backend services** — compute targets that serve HTTP behind the load balancer.
 
-Each service has an **`id`** you pass as **`service_id`** inside the `services` block of [`mistedo_lb_route`](../resources/lb_route.md).
-
----
+Each **`id`** is used as **`service_id`** inside the `services` block of [`mistedo_lb_route`](../resources/lb_route.md).
 
 ## Example
 
@@ -33,19 +31,29 @@ resource "mistedo_lb_route" "app" {
 }
 ```
 
-Combine with [`mistedo_load_balancers`](load_balancers.md) as in the [lb_route examples](../resources/lb_route.md).
+See also [`mistedo_lb_route`](../resources/lb_route.md) for full route examples.
 
----
+## Arguments
+
+This data source has **no** configuration arguments.
 
 ## Attributes
 
-`services` — list of objects:
+| Name | Description |
+|------|-------------|
+| `services` | List of service objects (see below). |
 
-| Field | Meaning |
-|-------|--------|
-| `id` | **Internal service id** — required for routes. |
+### `services` objects
+
+| Field | Description |
+|-------|-------------|
+| `id` | **Service id** — required for `mistedo_lb_route.services`. |
 | `ext_id` | External compute identifier. |
 | `name` | Display name. |
 | `ipaddresses` | Comma-separated backend IPs (string from API). |
 | `owner` | Owner from API. |
 | `account` | Account identifier. |
+
+## Notes
+
+- Prefer stable selection (by **`name`** or **`id`**) instead of hard-coding `[0]`.

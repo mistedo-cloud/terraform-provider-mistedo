@@ -1,21 +1,19 @@
 ---
-page_title: "mistedo_network Resource - terraform-provider-mistedo"
+page_title: "mistedo_network Resource - Mistedo Terraform Provider"
 subcategory: "Compute"
 description: |-
-  Creates and deletes a tenant private network (VPC-style) with one subnet on Mistedo; uses the regional compute API and waits for async tasks.
+  Creates and deletes a tenant private network (VPC-style) with one subnet; uses the regional compute API and waits for async tasks.
 ---
 
 # mistedo_network (Resource)
 
-A **private network** is an isolated **Layer-2/Layer-3 space** for your VMs. You set a single **`name`** in Terraform; the same string is sent as the **network name** and as **`subnet.name`** in the create API. You also set **subnet CIDR** and optional **DNS servers**. The API uses **IPv4** with **`network_protocol: ipv4`** and **`ip_version: 4`** for that subnet; those are **not** configurable in Terraform.
+A **private network** is an isolated space for your VMs. You set a single **`name`** in Terraform; it is sent as the **network name** and as **`subnet.name`** in the create API. You also set **subnet CIDR** and optional **DNS servers**. The API uses **IPv4** with fixed **`network_protocol`** / **`ip_version`** for that subnet; those are **not** configurable in Terraform.
 
-Create and delete are **asynchronous** on the server. The provider **waits for the ManageIQ task** and then **polls until the subnet appears**, similar to other compute resources (up to about **15 minutes** per operation).
+Create and delete are **asynchronous**. The provider waits for the ManageIQ task and polls until the subnet exists (up to about **15 minutes** per operation).
 
-**Destroy** can fail if **VM network interfaces** still use the subnet (for example right after an instance group is retired). The client then **waits** until subnet **`network_ports`** are empty when the API returns them, and **retries** transient HTTP errors (for example **500**) for up to about **20 minutes**; the Terraform delete timeout is **30 minutes**.
+**Destroy** can fail if **VM network interfaces** still use the subnet. The client **waits** until subnet **`network_ports`** are empty when the API returns them, and **retries** transient errors (e.g. **500**) for up to about **20 minutes**; the Terraform delete timeout is **30 minutes**.
 
-The API often **rewrites the name** (for example it adds a `<location>_<account>_` prefix). Terraform keeps your configured `name` in state so the next plan stays clean; the full name from the API is in **`canonical_name`**.
-
----
+The API may **rewrite the name** (e.g. `<location>_<account>_` prefix). Terraform keeps your configured `name` in state; the **`canonical_name`** attribute holds the full API name.
 
 ## Example
 
@@ -36,17 +34,13 @@ output "subnet_id" {
 }
 ```
 
----
-
 ## Arguments
 
 | Name | Required | Description |
 |------|----------|-------------|
-| `name` | yes | One label for both the network and its subnet in the API (same `name` and `subnet.name` on create). The platform may store a longer network name; see `canonical_name`. Changing it **replaces** the network. |
-| `cidr` | yes | CIDR for the **single** subnet created with the network (for example `10.0.0.0/24`). Changing it **replaces** the network. |
-| `dns_nameservers` | no | List of DNS server addresses for the subnet. If you **omit** this argument entirely, Terraform leaves it **unset in state** even if the platform fills in servers later (avoids endless drift). Set it when you want Terraform to **track** the list. Changing it **replaces** the network. |
-
----
+| `name` | Yes | Label for both the network and its subnet on create. The platform may store a longer name; see `canonical_name`. Changing it **replaces** the network. |
+| `cidr` | Yes | CIDR of the **single** subnet (e.g. `10.0.0.0/24`). Changing it **replaces** the network. |
+| `dns_nameservers` | No | DNS servers for the subnet. If **omitted**, Terraform leaves the attribute **unset in state** even if the platform fills defaults later (avoids drift). Set it when you want Terraform to **manage** the list. Changing it **replaces** the network. |
 
 ## Attributes
 
@@ -61,11 +55,9 @@ output "subnet_id" {
 | `subnet_ems_ref` | ManageIQ reference for the subnet when present. |
 | `gateway` | Subnet default gateway when the API returns it. |
 
----
-
 ## Import
 
-Import uses the numeric **cloud network id** from the UI or API:
+Use the numeric **cloud network id** from the UI or API:
 
 ```shell
 terraform import mistedo_network.app 81000000000123
@@ -73,9 +65,8 @@ terraform import mistedo_network.app 81000000000123
 
 After import, run **`terraform plan`**. You may need to align `name`, `cidr`, and optional fields with what the platform returns.
 
----
+## Notes
 
-## Practical notes
-
-* **No in-place update:** there is no generic “update network” in this resource; changing replaceable fields triggers **destroy + create**.
-* **Same headers as security groups:** calls use **`DoManageIQ`** (`x-miq-group` and `x-auth-*`) for `/api/compute/v1/...`.
+- There is **no generic in-place update** for this resource; changing replaceable fields triggers **destroy + create**.
+- Requests use **`x-miq-group`** and **`x-auth-*`** headers for `/api/compute/v1/...`.
+- Fix [provider](../index.md) **auth** (e.g. `auth_url` for dev) before debugging API errors.

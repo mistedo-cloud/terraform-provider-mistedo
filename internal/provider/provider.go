@@ -44,12 +44,12 @@ func (p *mistedoProvider) Schema(_ context.Context, _ provider.SchemaRequest, re
 		Attributes: map[string]schema.Attribute{
 			"username": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Username for Keycloak authentication.",
+				MarkdownDescription: "Username for OAuth2 (resource owner password) authentication.",
 			},
 			"password": schema.StringAttribute{
 				Required:            true,
 				Sensitive:           true,
-				MarkdownDescription: "Password for Keycloak authentication.",
+				MarkdownDescription: "Password for OAuth2 (resource owner password) authentication.",
 			},
 			"account": schema.StringAttribute{
 				Required:            true,
@@ -65,15 +65,15 @@ func (p *mistedoProvider) Schema(_ context.Context, _ provider.SchemaRequest, re
 			},
 			"auth_url": schema.StringAttribute{
 				Optional:            true,
-				MarkdownDescription: "Keycloak base URL including `/realms` (e.g. `https://auth.mistedo.by/realms`).",
+				MarkdownDescription: "Auth server base URL including `/realms` (e.g. `https://auth.mistedo.by/realms`).",
 			},
 			"auth_realm": schema.StringAttribute{
 				Optional:            true,
-				MarkdownDescription: "Keycloak realm. Defaults to \"master\".",
+				MarkdownDescription: "OAuth2 realm. Defaults to \"master\".",
 			},
 			"auth_client": schema.StringAttribute{
 				Optional:            true,
-				MarkdownDescription: "Keycloak OAuth2 client_id. Defaults to \"cloud-console\" (Mistedo cloud console).",
+				MarkdownDescription: "OAuth2 client_id. Defaults to \"cloud-console\" (Mistedo cloud console).",
 			},
 		},
 	}
@@ -163,7 +163,7 @@ func (p *mistedoProvider) Configure(ctx context.Context, req provider.ConfigureR
 		return
 	}
 	if err := c.EnsureToken(ctx); err != nil {
-		resp.Diagnostics.AddError("Authentication failed", "Could not obtain token from Keycloak: "+err.Error())
+		resp.Diagnostics.AddError("Authentication failed", "Could not obtain access token: "+err.Error())
 		return
 	}
 	resp.ResourceData = c

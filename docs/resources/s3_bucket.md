@@ -1,5 +1,5 @@
 ---
-page_title: "mistedo_s3_bucket Resource - terraform-provider-mistedo"
+page_title: "mistedo_s3_bucket Resource - Mistedo Terraform Provider"
 subcategory: "Storage"
 description: |-
   S3 bucket on Ceph RGW (Storage API v2).
@@ -21,12 +21,32 @@ resource "mistedo_s3_bucket" "data" {
 }
 ```
 
-You can express **no per-bucket limit** (unlimited) by **omitting** both quota attributes, or by setting **`quota_data_size_mb = -1`** and/or **`quota_objects = -1`** (same as the Storage API). If you omit them, the API’s `-1` values are stored as **unset** (`null`) in state; if you set `-1` explicitly, state keeps **`-1`** so the config and state stay aligned.
+**Unlimited** per-bucket quotas: **omit** both quota attributes, or set **`quota_data_size_mb = -1`** and/or **`quota_objects = -1`** (Storage API semantics). If you omit them, the API may return `-1` stored as **unset** (`null`) in state; if you set `-1` explicitly, state keeps **`-1`** so config and state align.
+
+## Arguments
+
+| Name | Required | Description |
+|------|----------|-------------|
+| `name` | Yes | Bucket short name; combined with user for **`path`**. |
+| `user_name` | Yes | Owning user — typically `mistedo_s3_user.<n>.full_name`. |
+| `quota_data_size_mb` | No | Data quota (MiB); `-1` or omit for unlimited per API rules. |
+| `quota_objects` | No | Object count quota; `-1` or omit for unlimited. |
+
+## Attributes
+
+| Name | Description |
+|------|-------------|
+| `id` | Full bucket path `account/short-name` (unique in storage; same meaning as `path`). |
+| `path` | Canonical path from the API (same as `id`). |
 
 ## Import
 
-```bash
+```shell
 terraform import mistedo_s3_bucket.data ha001/app-data
 ```
 
-Import id is the full **`path`** returned by the API (slash may appear as `%2F` in URLs; use the plain path in the CLI).
+Import id is the full **`path`** from the API (use the plain path in the CLI; URLs may escape `/` as `%2F`).
+
+## Notes
+
+- Create the [`mistedo_s3_user`](s3_user.md) first; the bucket references **`user_name`**.

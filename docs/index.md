@@ -1,37 +1,31 @@
 ---
-page_title: "Provider: mistedo"
+page_title: "Provider: Mistedo"
 description: |-
-  Configure the Mistedo Terraform provider: authentication, regions, and links to DNS, private networks, compute security groups, and load balancer resources.
+  Configure the Mistedo Terraform provider: OAuth2 authentication, regions, and resources for DNS, networking, compute, load balancing, and object storage.
 ---
 
 # Mistedo Provider
 
-This provider lets you manage parts of your **[Mistedo](https://mistedo.cloud)** cloud with **Terraform**: DNS zones and records, **private networks**, **firewall groups** (security groups) and rules, and **application load balancer** routes and certificates.
+Use this provider to manage **[Mistedo](https://mistedo.cloud)** resources with **Terraform**: DNS zones and records, **private networks**, **firewall groups** and rules, **instance groups**, **application load balancer** routes and certificates, **object storage** (S3), and **iSCSI** block storage.
 
-You **log in with the same style of account** the cloud console uses: **Keycloak** username and password. The provider requests a token and calls regional APIs at:
+Authentication uses your **cloud console login** (username and password). The provider obtains an OAuth2 access token and calls regional APIs at:
 
 `https://api.<location>.mistedo.by`
 
-For example, if `location = "dev"`, API calls go to `https://api.dev.mistedo.by`.
+For example, `location = "dev"` uses `https://api.dev.mistedo.by`.
 
----
+## Concepts
 
-## Concepts (quick)
+| Concept | Meaning |
+|---------|--------|
+| **Account** | Tenant id (e.g. `ha001`). Sent on requests so the API scopes data to your tenant. |
+| **Location** | Region or environment code (`dev`, …). Part of the API hostname. |
+| **Role** | API role (e.g. `owner`). With **account** it forms `account.role` used in headers. |
+| **Auth URL** | Base URL for the identity server (includes `/realms`). Production defaults to `https://auth.mistedo.by/realms`. For **dev**, set **`auth_url`** to `https://auth.dev.mistedo.by/realms` if token requests fail. |
 
-| Idea | Meaning |
-|------|--------|
-| **Account** | Your tenant id on the platform (e.g. `ha001`). Sent on every request so the API knows whose resources to use. |
-| **Location** | Short code for the **region / environment** (`dev`, etc.). It becomes part of the API hostname. |
-| **Role** | API role name (e.g. `owner`). Together with **account** it forms the group string `account.role` used in headers. |
-| **Auth URL** | Where Keycloak lives. **Production** defaults to `https://auth.mistedo.by/realms`. For **dev**, you usually must set **`auth_url`** to `https://auth.dev.mistedo.by/realms` or token requests will fail. |
+## Example configuration
 
-If you are new to Terraform, you only need: install Terraform, write a `.tf` file, run `terraform init` then `terraform apply`. Credentials should not be committed to Git; use a `terraform.tfvars` file (gitignored) or environment variables.
-
----
-
-## Example: minimal configuration
-
-The block below is enough to start. **Replace** the placeholder values with yours. For **dev**, keep the `auth_url` line as shown.
+Minimal provider block. Replace placeholders with your values. For **dev**, keep `auth_url` as shown.
 
 ```hcl
 terraform {
@@ -45,22 +39,19 @@ terraform {
 
 provider "mistedo" {
   username = "you@example.com"
-  password = "your-keycloak-password"
+  password = var.mistedo_password
 
   account  = "ha001"
   location = "dev"
   role     = "owner"
 
-  # Required for dev (and any environment where Keycloak is not the default host):
   auth_url    = "https://auth.dev.mistedo.by/realms"
   auth_realm  = "master"
   auth_client = "cloud-console"
 }
 ```
 
-Same settings can be supplied with **environment variables** (see below). Values in the `provider` block **override** env vars when both are set.
-
----
+You can set the same values via **environment variables** (see below). Values in the `provider` block override environment variables when both are set.
 
 ## Provider arguments
 
@@ -68,19 +59,19 @@ Same settings can be supplied with **environment variables** (see below). Values
 
 | Argument | Description |
 |----------|-------------|
-| `username` | Keycloak user (often an email). |
-| `password` | Keycloak password (mark `sensitive` in variable definitions). |
+| `username` | Login name (often an email). |
+| `password` | Login password (use a `sensitive` variable). |
 | `account` | Account id (`x-auth-account`). |
 | `location` | Region code → `api.<location>.mistedo.by`. |
 | `role` | Role name (`x-auth-role`). With `account` builds `x-auth-group` and, for compute APIs, **`x-miq-group`**. |
 
-### Optional (Keycloak)
+### Optional (authentication)
 
 | Argument | Default / notes |
 |----------|-----------------|
-| `auth_url` | If empty, the client uses built-in defaults (production-style). Set explicitly for **dev** (see example above). You may omit the trailing `/realms`; the provider can add it. |
+| `auth_url` | If empty, the client uses built-in production defaults. Set explicitly for **dev** when needed. You may omit the trailing `/realms`; the provider can add it. |
 | `auth_realm` | Default `master` when unset. |
-| `auth_client` | Default **`cloud-console`** (same public client as the cloud UI for password grant). Change only if your IdP uses another client. |
+| `auth_client` | Default **`cloud-console`** (same public client as the cloud UI for password grant). |
 
 ### Environment variables
 
@@ -92,54 +83,48 @@ Same settings can be supplied with **environment variables** (see below). Values
 | `MISTEDO_LOCATION` | `location` |
 | `MISTEDO_ROLE` | `role` |
 
-There are no env vars for `auth_url` / `auth_realm` / `auth_client` in the provider schema; set those in HCL if needed.
+There are no environment variables for `auth_url`, `auth_realm`, or `auth_client`; set those in HCL if needed.
 
----
-
-## What the provider sends on each request
+## Request headers
 
 Every API call includes:
 
 - `Authorization: Bearer <token>`
 - `x-auth-account`, `x-auth-role`, `x-auth-group` (group = `<account>.<role>`)
 
-**Compute** (private networks, security groups, tasks) also requires **`x-miq-group`** with the same `<account>.<role>` value. The provider sets this automatically when using those APIs.
+**Compute** APIs (private networks, security groups, instance groups, etc.) also send **`x-miq-group`** with the same `<account>.<role>` value. The provider sets this automatically.
 
-**Storage** (Ceph RGW control plane, `GET/POST /api/storage/v2/...`) uses the same JWT and **`x-auth-account`** / **`x-auth-role`** headers; it does **not** use `x-miq-group`.
+**Storage** APIs (`/api/storage/v2/...`) use the same JWT and **`x-auth-account`** / **`x-auth-role`** headers; they do **not** use `x-miq-group`.
 
----
+## Resources
 
-## Resources (what you can manage)
+| Resource | Purpose |
+|----------|---------|
+| [`mistedo_dns_zone`](resources/dns_zone.md) | DNS **hosted zone**. |
+| [`mistedo_dns_record`](resources/dns_record.md) | **DNS record** (A, CNAME, MX, …). |
+| [`mistedo_network`](resources/network.md) | **Private network** with one subnet. |
+| [`mistedo_vpc_route`](resources/vpc_route.md) | **Static route** on the tenant default router. |
+| [`mistedo_security_group`](resources/security_group.md) | **Firewall group** (rules added separately). |
+| [`mistedo_security_group_rule`](resources/security_group_rule.md) | One **firewall rule** in a group. |
+| [`mistedo_instance_group`](resources/instance_group.md) | **Instance group** (catalog order, multiple VMs). |
+| [`mistedo_lb_route`](resources/lb_route.md) | **HTTP(S) route** on the platform load balancer. |
+| [`mistedo_lb_certificate`](resources/lb_certificate.md) | **TLS certificate** for HTTPS routes. |
+| [`mistedo_s3_user`](resources/s3_user.md) | **S3 user** (Ceph RGW keys). |
+| [`mistedo_s3_bucket`](resources/s3_bucket.md) | **S3 bucket**. |
+| [`mistedo_iscsi_disk`](resources/iscsi_disk.md) | **iSCSI block disk**. |
+| [`mistedo_iscsi_client`](resources/iscsi_client.md) | **iSCSI client** (initiator / CHAP). |
 
-| Resource | Plain-language purpose |
-|----------|-------------------------|
-| [`mistedo_dns_zone`](resources/dns_zone.md) | A **DNS zone** (like a hosted zone in AWS Route 53). |
-| [`mistedo_dns_record`](resources/dns_record.md) | A **single DNS record** (A, CNAME, MX, …) inside a zone. |
-| [`mistedo_network`](resources/network.md) | A **private network** with one subnet (VPC-style tenant network). |
-| [`mistedo_vpc_route`](resources/vpc_route.md) | A **static VPC route** on the tenant default **network router** (`add_route` / `remove_route`). |
-| [`mistedo_security_group`](resources/security_group.md) | A **firewall group** for VMs/network (empty rules after create; you add rules separately). |
-| [`mistedo_security_group_rule`](resources/security_group_rule.md) | One **allow rule** (e.g. SSH from a CIDR) in a group. |
-| [`mistedo_instance_group`](resources/instance_group.md) | **Instance group** (catalog service): several VMs from one template (cart order + provision wait). |
-| [`mistedo_lb_route`](resources/lb_route.md) | **HTTP(S) routing**: hostname → backend services on the platform load balancer. |
-| [`mistedo_lb_certificate`](resources/lb_certificate.md) | **TLS certificate** uploaded for HTTPS routes. |
-| [`mistedo_s3_user`](resources/s3_user.md) | **Ceph RGW S3 user** (access/secret keys for S3-compatible object storage). |
-| [`mistedo_s3_bucket`](resources/s3_bucket.md) | **S3 bucket** in that account (bucket name + owning S3 user). |
-| [`mistedo_iscsi_disk`](resources/iscsi_disk.md) | **iSCSI block disk** (volume in an existing iSCSI target for a pool). |
-| [`mistedo_iscsi_client`](resources/iscsi_client.md) | **iSCSI client** (initiator IQN / CHAP for attaching disks). |
-
-## Data sources (read-only lists)
+## Data sources
 
 | Data source | Returns |
 |-------------|---------|
-| [`mistedo_load_balancers`](data-sources/load_balancers.md) | Available **load balancer gateways** (ids for routes). |
-| [`mistedo_lb_backend_services`](data-sources/lb_backend_services.md) | **Backend services** you can attach to a route. |
-| [`mistedo_instance_template`](data-sources/instance_template.md) | **VM catalog template** by product name and optional version (for ordering / instance groups). |
+| [`mistedo_load_balancers`](data-sources/load_balancers.md) | Load balancer **gateways** (ids for routes). |
+| [`mistedo_lb_backend_services`](data-sources/lb_backend_services.md) | **Backend services** for routes. |
+| [`mistedo_instance_template`](data-sources/instance_template.md) | **VM catalog template** by name and version. |
 | [`mistedo_s3_pools`](data-sources/s3_pools.md) | **S3 storage pools** (names for `mistedo_s3_user.pool_name`). |
 
----
+## Troubleshooting
 
-## Where to go next
-
-1. Pick a resource from the table above and open its page — each page starts with a **short explanation** and a **copy-paste example**.
-2. If `terraform apply` fails with **401** / **invalid_client** on a non-production environment, check **`auth_url`** first.
-3. Security group **create** can take **one to two minutes** the first time (the platform adds default rules, then the provider removes them).
+1. **`401` / `invalid_client` on non-production** — Check **`auth_url`** and realm first.
+2. **Security group** first create can take **one to two minutes** (platform default rules, then the provider clears them).
+3. **Provider docs** in the Registry mirror each resource page: start from the tables above and open the linked page for arguments, attributes, and import syntax.

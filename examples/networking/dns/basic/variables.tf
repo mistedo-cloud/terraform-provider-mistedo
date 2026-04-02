@@ -1,12 +1,12 @@
 variable "mistedo_username" {
   type        = string
-  description = "Keycloak username (often an email)."
+  description = "Mistedo login username (often an email)."
 }
 
 variable "mistedo_password" {
   type        = string
   sensitive   = true
-  description = "Keycloak password."
+  description = "Mistedo login password."
 }
 
 variable "mistedo_account" {

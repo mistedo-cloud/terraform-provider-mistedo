@@ -1,4 +1,8 @@
+# https://goreleaser.com
+# https://developer.hashicorp.com/terraform/registry/providers/publishing
 version: 2
+
+project_name: terraform-provider-mistedo
 
 before:
   hooks:
@@ -6,43 +10,61 @@ before:
 
 builds:
   - id: terraform-provider-mistedo
+    env:
+      - CGO_ENABLED=0
+    mod_timestamp: "{{ .CommitTimestamp }}"
     main: .
-    binary: terraform-provider-mistedo
     flags:
-      - -ldflags=-s -w -X main.version={{.Version}}
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{.Version}}
     goos:
+      - freebsd
+      - windows
       - linux
       - darwin
-      - windows
     goarch:
       - amd64
+      - "386"
+      - arm
       - arm64
     ignore:
+      - goos: darwin
+        goarch: "386"
       - goos: windows
-        goarch: arm64
+        goarch: arm
+    binary: "{{ .ProjectName }}_v{{ .Version }}"
 
 archives:
   - id: default
-    name_template: >-
-      {{ .ProjectName }}_{{ .Version }}_
-      {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "arm64" }}arm64
-      {{- else }}{{ .Arch }}{{ end }}
-    format: zip
-    format_overrides:
-      - goos: windows
-        format: zip
+    formats:
+      - zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
       - none*
 
 checksum:
-  name_template: 'terraform-provider-mistedo_{{ .Version }}_SHA256SUMS'
+  extra_files:
+    - glob: terraform-registry-manifest.json
+      name_template: "{{ .ProjectName }}_{{ .Version }}_manifest.json"
+  name_template: "{{ .ProjectName }}_{{ .Version }}_SHA256SUMS"
   algorithm: sha256
 
+signs:
+  - artifacts: checksum
+    args:
+      - "--batch"
+      - "--local-user"
+      - "{{ .Env.GPG_FINGERPRINT }}"
+      - "--output"
+      - "${signature}"
+      - "--detach-sign"
+      - "${artifact}"
+
 release:
-  github:
-    owner: mistedo
-    name: terraform-provider-mistedo
-  name_template: 'v{{ .Version }}'
-  draft: false
+  extra_files:
+    - glob: terraform-registry-manifest.json
+      name_template: "{{ .ProjectName }}_{{ .Version }}_manifest.json"
+
+changelog:
+  disable: true

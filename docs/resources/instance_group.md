@@ -1,35 +1,15 @@
 ---
-page_title: "mistedo_instance_group Resource - terraform-provider-mistedo"
+page_title: "mistedo_instance_group Resource - Mistedo Terraform Provider"
 subcategory: "Compute"
 description: |-
-  Orders a catalog service (instance group): multiple VMs from one template via ManageIQ cart API.
+  Orders a catalog service (instance group): multiple VMs from one template via the compute cart API.
 ---
 
 # mistedo_instance_group (Resource)
 
-Creates a **service** in the regional compute API by posting to **`POST /api/compute/v1/service_orders/cart/service_requests`** with `action: add`. The provider waits until **`lifecycle_state`** is **`provisioned`**, the expected number of VMs exist, and each VM has an IPv4 on a **`nic`** allocation, then loads **per-VM disks** from **`GET /vms/{id}?attributes=disks`**.
+Creates a **service** by posting to **`POST /api/compute/v1/service_orders/cart/service_requests`** with `action: add`. The provider waits until **`lifecycle_state`** is **`provisioned`**, the expected VM count exists, and each VM has an IPv4 on a **`nic`** allocation, then loads **per-VM disks** from **`GET /vms/{id}?attributes=disks`**.
 
-**In-place API updates** (changing VM count, disks, template, subnet, etc.) are **not** supported. Use `terraform apply -replace` on this resource when you need a new service. **`terraform apply`** may still run an in-place **refresh** when only **computed** attributes change (for example `instances`, `lifecycle_state`) so state matches the API.
-
----
-
-## Subnet, CIDR, and IP
-
-- **`subnet`** is the **subnet name** from the API (`cloud_subnets.name`). It is usually the **canonical** network name, e.g. `<location>_<account>_<short_name>`, not necessarily the short `name` you set on `mistedo_network`. Wire **`mistedo_network.<n>.canonical_name`** into **`subnet`** when both resources are in the same stack.
-- **`private_ipv4_cidr`** is **always computed** from that subnet in the API. You **cannot** set it in Terraform.
-- **`private_ip_allocation`**: `auto` (platform picks an address) or `manual`. With **`manual`**, set **`private_ipv4_address`** to an IPv4 **inside** the subnet CIDR.
-- **`region_number`** in the order payload is **computed** from the **third octet** of the subnet’s IPv4 CIDR (platform contract used in the live API).
-
-**Vlan** sent to the API is `"<subnet> (<subnet>)"`.
-
----
-
-## Disks
-
-- **`boot_disk`** (required): system disk for every VM.
-- **`data_disk`** (optional): at most **one** extra disk at order time. Additional data disks can appear later (reconfiguration); they show up under **`instances[].data_disks`** on refresh.
-
----
+**In-place API updates** (VM count, disks, template, subnet, etc.) are **not** supported. Use `terraform apply -replace` when you need a new service. **`apply`** may still **refresh** when only **computed** attributes change (`instances`, `lifecycle_state`, …).
 
 ## Example
 
@@ -71,7 +51,6 @@ resource "mistedo_instance_group" "app" {
   security_group_ids = ["81000000000108"]
 
   pass_auth = "disable_password"
-  # password: omit to auto-generate, or set var.admin_password (do not use "")
 
   ssh_public_keys      = [var.ssh_public_key]
   public_remote_access = ["22/tcp"]
@@ -89,38 +68,55 @@ output "vm_ips" {
 }
 ```
 
----
+Omit **`password`** to auto-generate at create, or set `var.admin_password`. Do **not** set `password = ""` (breaks sensitive plan validation).
 
 ## Arguments
 
-| Name | Description |
-|------|-------------|
-| `name` | Service name. |
-| `description` | Optional description. |
-| `template_id` | Catalog template id (`mistedo_instance_template`). |
-| `desired_instance_count` | Number of VMs (1–500). |
-| `cpu_cores` | vCPU per VM. |
-| `memory_mib` | RAM per VM (MiB). |
-| `boot_disk` | Required nested object: `boot_disk = { size_gib, type }` (not a `boot_disk { }` block). |
-| `data_disk` | Optional nested object: `data_disk = { size_gib, type }`. |
-| `subnet` | Subnet **name** in the API (often `mistedo_network.<n>.canonical_name`). |
-| `private_ip_allocation` | `auto` or `manual`. |
-| `private_ipv4_address` | Required for `manual`; must lie in computed CIDR. |
-| `security_group_ids` | Up to one id today (first element sent to API). |
-| `pass_auth` | API `pass_auth` string. |
-| `password` | Optional, computed, sensitive. **Omit** to auto-generate at create. Do not set to `""` (breaks plan validation for sensitive values). |
-| `ssh_public_keys` | Optional list. |
-| `public_remote_access` | Optional list (e.g. `22/tcp`). |
-| `managed_access` | Optional. |
-| `user_data` | Optional cloud-init. |
+| Name | Required | Description |
+|------|----------|-------------|
+| `name` | Yes | Service name. |
+| `description` | No | Description. |
+| `template_id` | Yes | Catalog template id ([`mistedo_instance_template`](../data-sources/instance_template.md)). |
+| `desired_instance_count` | Yes | Number of VMs (1–500). |
+| `cpu_cores` | Yes | vCPU per VM. |
+| `memory_mib` | Yes | RAM per VM (MiB). |
+| `boot_disk` | Yes | Nested object: `boot_disk = { size_gib, type }` (not a `boot_disk { }` block). |
+| `data_disk` | No | Nested object: `data_disk = { size_gib, type }`. At most **one** extra disk at order time. |
+| `subnet` | Yes | Subnet **name** in the API (often `mistedo_network.<n>.canonical_name`). |
+| `private_ip_allocation` | Yes | `auto` or `manual`. |
+| `private_ipv4_address` | No | Required for `manual`; must lie inside the subnet CIDR. |
+| `security_group_ids` | No | Up to one id today (first element sent to API). |
+| `pass_auth` | Yes | API `pass_auth` string. |
+| `password` | No | Optional, computed, sensitive. **Omit** to auto-generate. Do not set to `""`. |
+| `ssh_public_keys` | No | Optional list. |
+| `public_remote_access` | No | e.g. `22/tcp`. |
+| `managed_access` | No | Optional. |
+| `user_data` | No | Optional cloud-init. |
 
-## Attributes (computed)
+## Attributes
 
 | Name | Description |
 |------|-------------|
 | `id` | Service id. |
-| `private_ipv4_cidr` | CIDR from the resolved subnet. |
+| `private_ipv4_cidr` | CIDR from the resolved subnet (**always computed**; you cannot set it in Terraform). |
 | `lifecycle_state` | e.g. `provisioned`. |
-| `region_number` | Derived for the order. |
-| `vlan` | Vlan string sent to the API. |
+| `region_number` | Derived for the order (from subnet CIDR third octet in the live API contract). |
+| `vlan` | Vlan string sent to the API (`"<subnet> (<subnet>)"`). |
 | `instances` | Per VM: `boot_disk`, `data_disks[]`, `network_interfaces[]`. |
+
+## Notes
+
+### Subnet, CIDR, and IP
+
+- **`subnet`** is the **subnet name** from the API (`cloud_subnets.name`), often the **canonical** network name like `<location>_<account>_<short_name>`. Wire **`mistedo_network.<n>.canonical_name`** into **`subnet`** when both resources share a stack.
+- **`private_ipv4_cidr`** is **always computed** from the subnet; you cannot set it.
+- **`private_ip_allocation`**: `auto` or `manual`. With **`manual`**, set **`private_ipv4_address`** inside the subnet CIDR.
+
+### Disks
+
+- **`boot_disk`** (required): system disk for every VM.
+- **`data_disk`** (optional): one extra disk at order time; more may appear after reconfiguration under **`instances[].data_disk`**.
+
+### Import
+
+Import is not documented for this resource; manage lifecycle through Terraform create/destroy or `terraform apply -replace`.

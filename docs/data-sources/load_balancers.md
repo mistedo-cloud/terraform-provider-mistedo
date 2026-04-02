@@ -1,5 +1,5 @@
 ---
-page_title: "mistedo_load_balancers Data Source - terraform-provider-mistedo"
+page_title: "mistedo_load_balancers Data Source - Mistedo Terraform Provider"
 subcategory: "ALB"
 description: |-
   Lists load balancer gateways for the account; use gateway id when creating mistedo_lb_route.
@@ -7,11 +7,9 @@ description: |-
 
 # mistedo_load_balancers (Data Source)
 
-**Read-only.** Fetches the list of **Cloud Gateways** (application load balancers) available to your account.
+Lists **Cloud Gateways** (application load balancers) available to your account.
 
-Use a gateway’s **`id`** as **`cloud_gateway_id`** on [`mistedo_lb_route`](../resources/lb_route.md).
-
----
+Use a gateway **`id`** as **`cloud_gateway_id`** on [`mistedo_lb_route`](../resources/lb_route.md).
 
 ## Example
 
@@ -27,18 +25,28 @@ output "first_gateway_name" {
 }
 ```
 
-In real configs, choose the gateway that matches your environment (by `name` or `id`), not always `[0]`.
+In real configs, select the gateway by **`name`** or **`id`**, not only `[0]`.
 
----
+## Arguments
+
+This data source has **no** configuration arguments.
 
 ## Attributes
 
-`gateways` — list of objects:
+| Name | Description |
+|------|-------------|
+| `gateways` | List of gateway objects (see below). |
 
-| Field | Meaning |
-|-------|--------|
-| `id` | **Numeric id** — use on routes. |
+### `gateways` objects
+
+| Field | Description |
+|-------|-------------|
+| `id` | **Numeric id** — use on [`mistedo_lb_route`](../resources/lb_route.md). |
 | `name` | Human-readable name (e.g. `alb-default`). |
 | `cloudgw_id` | CloudGateway VM UUID. |
 | `cloudgw_instance` | Instance display name. |
 | `account` | Account identifier. |
+
+## Notes
+
+- Combine with [`mistedo_lb_backend_services`](lb_backend_services.md) when building routes; see [`mistedo_lb_route`](../resources/lb_route.md) examples.

@@ -51,7 +51,7 @@ type Client struct {
 	ruleAddMu map[string]*sync.Mutex
 }
 
-// New creates a new Mistedo API client (Keycloak auth).
+// New creates a new Mistedo API client with OAuth2 password-grant authentication.
 func New(cfg *Config) (*Client, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("config is nil")
@@ -63,7 +63,7 @@ func New(cfg *Config) (*Client, error) {
 	if authURL == "" {
 		authURL = defaultAuthURL
 	}
-	// Keycloak token URL is {base}/realms/{realm}/protocol/openid-connect/token
+	// Token URL is {base}/realms/{realm}/protocol/openid-connect/token
 	if !strings.Contains(authURL, "/realms") {
 		authURL = authURL + "/realms"
 	}
@@ -143,7 +143,7 @@ func (c *Client) fetchToken(ctx context.Context) (token string, expiresAt time.T
 	return out.AccessToken, exp, nil
 }
 
-// EnsureToken fetches and caches a JWT from Keycloak. Call this during provider Configure
+// EnsureToken fetches and caches a JWT from the auth server. Call this during provider Configure
 // to validate credentials and fail fast at plan time if auth_url or credentials are wrong.
 func (c *Client) EnsureToken(ctx context.Context) error {
 	_, err := c.getToken(ctx)

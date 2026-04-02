@@ -1,7 +1,7 @@
 package client
 
 // Config holds provider configuration for the Mistedo API client.
-// Authentication is done via Keycloak (OAuth2 resource owner password flow).
+// Authentication uses OAuth2 resource owner password flow against the configured auth server.
 type Config struct {
 	Username     string
 	Password     string
