@@ -1,0 +1,8 @@
+mistedo_username = "you@example.com"
+mistedo_password = "replace-me"
+mistedo_account  = "ha001"
+mistedo_location = "dev"
+mistedo_role     = "owner"
+
+# template_name    = "Fedora Cloud"
+# template_version = "39-240223"

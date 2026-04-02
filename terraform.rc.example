@@ -1,0 +1,14 @@
+# Copy this file to ~/.terraformrc (or %APPDATA%\terraform.rc on Windows).
+# Replace YOUR_HOME with your actual home path (e.g. /Users/user1).
+
+# Filesystem mirror: Terraform loads the provider from disk and never contacts
+# the registry. Required so "terraform init" does not try registry.terraform.io.
+provider_installation {
+  filesystem_mirror {
+    path    = "YOUR_HOME/.terraform.d/plugins"
+    include = ["registry.terraform.io/mistedo-cloud/mistedo"]
+  }
+  direct {
+    exclude = ["registry.terraform.io/mistedo-cloud/mistedo"]
+  }
+}

@@ -1,0 +1,8 @@
+mistedo_username = "you@example.com"
+mistedo_password = "replace-me"
+mistedo_account  = "ha001"
+mistedo_location = "dev"
+mistedo_role     = "owner"
+
+zone_name = "mail-demo.example.com"
+# mail_host = "smtp.yourprovider.com"

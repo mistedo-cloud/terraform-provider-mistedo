@@ -1,0 +1,48 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: terraform-provider-mistedo
+    main: .
+    binary: terraform-provider-mistedo
+    flags:
+      - -ldflags=-s -w -X main.version={{.Version}}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - id: default
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "arm64" }}arm64
+      {{- else }}{{ .Arch }}{{ end }}
+    format: zip
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - none*
+
+checksum:
+  name_template: 'terraform-provider-mistedo_{{ .Version }}_SHA256SUMS'
+  algorithm: sha256
+
+release:
+  github:
+    owner: mistedo
+    name: terraform-provider-mistedo
+  name_template: 'v{{ .Version }}'
+  draft: false

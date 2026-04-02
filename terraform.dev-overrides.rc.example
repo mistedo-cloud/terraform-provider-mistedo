@@ -1,0 +1,26 @@
+# For day-to-day provider development: use a locally built binary without
+# maintaining the registry mirror layout.
+#
+# 1. Build into a directory Terraform will scan:
+#    mkdir -p build && go build -o build/terraform-provider-mistedo .
+# 2. Copy this file to e.g. ~/.terraformrc.dev-overrides and set DEV_BUILD_DIR
+#    to the ABSOLUTE path of the "build" directory (must contain the executable
+#    terraform-provider-mistedo).
+# 3. Run Terraform with:
+#    export TF_CLI_CONFIG_FILE=$HOME/.terraformrc.dev-overrides
+#
+# With dev_overrides, Terraform uses your local binary for plan/apply. On
+# Terraform 1.14.x, `terraform init` may still try the registry for this
+# provider and fail with "Invalid provider registry host" if it is not
+# published — that is expected. Prefer `terraform plan` / `apply` after a
+# one-time backend init, or use the filesystem mirror (terraform.rc.example)
+# when you need a normal `terraform init` workflow.
+
+provider_installation {
+  dev_overrides {
+    "registry.terraform.io/mistedo-cloud/mistedo" = "DEV_BUILD_DIR"
+  }
+
+  # Required so other providers still resolve from the registry.
+  direct {}
+}

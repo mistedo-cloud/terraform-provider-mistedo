@@ -1,0 +1,7 @@
+mistedo_username = "you@example.com"
+mistedo_password = "replace-me"
+mistedo_account  = "ha001"
+mistedo_location = "dev"
+mistedo_role     = "owner"
+
+zone_name = "demo-yourname.example.com"

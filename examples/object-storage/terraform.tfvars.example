@@ -1,0 +1,11 @@
+mistedo_username   = "user@example.com"
+mistedo_password   = "change-me"
+mistedo_account    = "ha001"
+mistedo_location   = "dev"
+mistedo_role       = "owner"
+mistedo_auth_url   = "https://auth.dev.mistedo.by/realms"
+
+s3_pool_name       = "nvme"
+s3_user_short_name = "myapp"
+s3_owner_email     = "ops@example.com"
+bucket_short_name  = "my-bucket"

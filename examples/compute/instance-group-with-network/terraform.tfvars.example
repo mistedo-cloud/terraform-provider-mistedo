@@ -1,0 +1,9 @@
+mistedo_username = "you@example.com"
+mistedo_password = "replace-me"
+mistedo_account  = "ha001"
+mistedo_location = "dev"
+mistedo_role     = "owner"
+
+# network_cidr       = "10.240.0.0/24"
+# ssh_ingress_cidr   = "203.0.113.0/24"
+# template_version   = "39-240223"

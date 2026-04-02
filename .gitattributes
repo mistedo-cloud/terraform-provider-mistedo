@@ -1,0 +1,5 @@
+# Normalize line endings for cross-platform repos
+* text=auto eol=lf
+
+*.go linguist-detectable=true
+*.md linguist-documentation

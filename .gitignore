@@ -1,0 +1,59 @@
+# Built provider binary (local name)
+terraform-provider-mistedo
+terraform-provider-mistedo_*
+
+# Go build / test
+/build/
+/dist/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+coverage.html
+*.coverprofile
+vendor/
+
+# Terraform (runs and local mirrors)
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+crash.log
+crash.*.log
+override.tf
+*_override.tf
+.terraformrc
+terraform.rc
+
+# Secrets and local env
+.env
+.env.*
+!.env.example
+
+# IDE / editors
+.idea/
+.vscode/
+*.swp
+*~
+.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Delve / debugging
+__debug_bin*
+debug.test
+
+# Goreleaser output (if used locally)
+dist/
+
+# Local editor configuration (do not commit)
+.cursor/
